@@ -17,6 +17,8 @@ contract Lottery is VRFConsumerBaseV2 {
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
     uint32 private constant NUM_WORDS = 1;
 
+    address private s_recentWinner;
+
     event LotteryEnter(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
 
@@ -64,5 +66,9 @@ contract Lottery is VRFConsumerBaseV2 {
 
     function getPlayer(uint256 index) public view returns (address) {
         return s_players[index];
+    }
+
+    function getRecentWinner() public view returns (address) {
+        return s_recentWinner;
     }
 }
