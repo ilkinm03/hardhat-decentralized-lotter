@@ -22,6 +22,7 @@ contract Lottery is VRFConsumerBaseV2 {
 
     event LotteryEnter(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
+    event WinnerPicked(address indexed winner);
 
     modifier requireMinimumValue() {
         if (msg.value < i_entranceFee) {
@@ -68,6 +69,7 @@ contract Lottery is VRFConsumerBaseV2 {
         if (!success) {
             revert Lottery_TransferFailed();
         }
+        emit WinnerPicked(recentWinner);
     }
 
     function getEntranceFee() public view returns (uint256) {
