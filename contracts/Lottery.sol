@@ -5,6 +5,7 @@ import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 
     error Lottery_InsufficientFunds();
+    error Lottery_TransferFailed();
 
 contract Lottery is VRFConsumerBaseV2 {
 
@@ -59,6 +60,15 @@ contract Lottery is VRFConsumerBaseV2 {
         emit RequestedLotteryWinner(requestId);
     }
 
+    function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
+        uint256 indexOfWinner = randomWords[0] % s_players.length;
+        address payable recentWinner = s_players[indexOfWinner];
+        s_recentWinner = recentWinner;
+        (bool success,) = recentWinner.call{value: address(this).balance}("");
+        if (!success) {
+            revert Lottery_TransferFailed();
+        }
+    }
 
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
