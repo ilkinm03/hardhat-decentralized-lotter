@@ -6,6 +6,8 @@
   "author": "Ilkin Mammadli <ilkinmammadli01@gmail.com>",
   "license": "MIT",
   "devDependencies": {
+    "@chainlink/contracts": "^1.0.0",
+    "@nomicfoundation/hardhat-ethers": "^3.0.2",
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers",
     "@nomiclabs/hardhat-etherscan": "^3.1.8",
     "@nomiclabs/hardhat-waffle": "^2.0.6",
