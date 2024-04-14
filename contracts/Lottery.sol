@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
+
     error Lottery_InsufficientFunds();
 
-contract Lottery {
+contract Lottery is VRFConsumerBaseV2 {
 
     uint256 private immutable i_entranceFee;
     address payable[] private s_players;
