@@ -15,7 +15,7 @@ import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.s
  *  @notice A smart contract for creating a decentralized lottery game
  *  @dev This smart contract uses ChainLink VRF v2 and ChainLink Keepers
  */
-contract Lottery is VRFConsumerBaseV2 {
+contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
 
     /// @notice The possible states of the lottery
     enum LotteryState {OPEN, CALCULATING}
