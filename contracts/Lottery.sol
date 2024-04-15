@@ -6,6 +6,8 @@ import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.s
 
     error Lottery_InsufficientFunds();
     error Lottery_TransferFailed();
+    error Lottery__InsufficientFunds();
+    error Lottery__TransferFailed();
 
 contract Lottery is VRFConsumerBaseV2 {
 
@@ -26,7 +28,7 @@ contract Lottery is VRFConsumerBaseV2 {
 
     modifier requireMinimumValue() {
         if (msg.value < i_entranceFee) {
-            revert Lottery_InsufficientFunds();
+            revert Lottery__InsufficientFunds();
         }
         _;
     }
@@ -67,7 +69,7 @@ contract Lottery is VRFConsumerBaseV2 {
         s_recentWinner = recentWinner;
         (bool success,) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
-            revert Lottery_TransferFailed();
+            revert Lottery__TransferFailed();
         }
         emit WinnerPicked(recentWinner);
     }
