@@ -118,13 +118,14 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
      * @return upkeepNeeded A boolean indicating whether upkeep is needed.
      */
     function checkUpkeep(
-        bytes calldata /*checkData*/
+        bytes memory /*checkData*/
     ) public override returns (bool upkeepNeeded, bytes memory /*performData*/) {
         bool isOpen = s_lotteryState == LotteryState.OPEN;
         bool timePassed = (block.timestamp - s_lastTimestamp) > i_interval;
         bool hasPlayers = s_players.length > 0;
         bool hasBalance = address(this).balance > 0;
         upkeepNeeded = (isOpen && timePassed && hasPlayers && hasBalance);
+        return (upkeepNeeded, "");
     }
 
     /**
