@@ -10,28 +10,53 @@ import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.s
     error Lottery__NotOpen();
     error Lottery__UpkeepNotNeeded(uint256 currentBalance, uint256 numPlayers, uint256 lotterState);
 
+/** @title A lottery contract
+ *  @author Ilkin Mammadli <ilkinmammadli01@gmail.com>
+ *  @notice A smart contract for creating a decentralized lottery game
+ *  @dev This smart contract uses ChainLink VRF v2 and ChainLink Keepers
+ */
 contract Lottery is VRFConsumerBaseV2 {
 
+    /// @notice The possible states of the lottery
     enum LotteryState {OPEN, CALCULATING}
 
+    /// @notice The entrance fee for the lottery
     uint256 private immutable i_entranceFee;
+    /// @notice The list of players in the lottery
     address payable[] private s_players;
+    /// @notice The gas lane for the VRF request
     bytes32 private immutable i_gasLane;
+    /// @notice The subscription ID for the VRF request
     uint64 private immutable i_subscriptionId;
+    /// @notice The interface to the VRF Coordinator
     VRFCoordinatorV2Interface private immutable i_vrfCoordinator;
+    /// @notice The gas limit for the VRF callback
     uint32 private immutable i_callbackGasLimit;
+    /// @notice The number of confirmations required for the VRF request
     uint16 private constant REQUEST_CONFIRMATIONS = 3;
+    /// @notice The number of words requested from the VRF
     uint32 private constant NUM_WORDS = 1;
+    /// @notice The last timestamp when the lottery was drawn
     uint256 private s_lastTimestamp;
 
+    /// @notice The address of the most recent winner
     address private s_recentWinner;
+    /// @notice The current state of the lottery
     LotteryState private s_lotteryState;
+    /// @notice The interval for the lottery draw
     uint256 private immutable i_interval;
 
+    /// @notice Event emitted when a player enters the lottery
     event LotteryEnter(address indexed player);
+    /// @notice Event emitted when a lottery winner is requested
     event RequestedLotteryWinner(uint256 indexed requestId);
+    /// @notice Event emitted when a winner is picked
     event WinnerPicked(address indexed winner);
 
+    /**
+     * @dev This modifier checks if the transaction value is greater than or equal to the entrance fee.
+     * If the value is less than the entrance fee, it reverts the transaction with a Lottery__InsufficientFunds error.
+     */
     modifier requireMinimumValue() {
         if (msg.value < i_entranceFee) {
             revert Lottery__InsufficientFunds();
@@ -39,6 +64,10 @@ contract Lottery is VRFConsumerBaseV2 {
         _;
     }
 
+    /**
+     * @dev This modifier checks if the lottery state is OPEN.
+     * If the state is not OPEN, it reverts the transaction with a Lottery__NotOpen error.
+     */
     modifier requireLotteryNotEnded() {
         if (s_lotteryState != LotteryState.OPEN) {
             revert Lottery__NotOpen();
@@ -46,6 +75,15 @@ contract Lottery is VRFConsumerBaseV2 {
         _;
     }
 
+    /**
+     * @dev Initializes a new instance of the Lottery contract.
+     * @param vrfCoordinatorV2 The address of the VRF Coordinator V2 contract.
+     * @param entranceFee The entrance fee for the lottery.
+     * @param gasLane The gas lane for the VRF request.
+     * @param subscriptionId The subscription ID for the VRF request.
+     * @param callbackGasLimit The gas limit for the VRF callback.
+     * @param interval The interval for the lottery draw.
+     */
     constructor(
         address vrfCoordinatorV2,
         uint256 entranceFee,
@@ -64,11 +102,21 @@ contract Lottery is VRFConsumerBaseV2 {
         i_interval = interval;
     }
 
+    /**
+     * @dev Allows a player to enter the lottery.
+     * The function checks if the lottery is not ended and if the transaction value is greater than or equal to the entrance fee.
+     * If these conditions are met, the player is added to the lottery and a LotteryEnter event is emitted.
+     */
     function enterLottery() public payable requireLotteryNotEnded requireMinimumValue {
         s_players.push(payable(msg.sender));
         emit LotteryEnter(msg.sender);
     }
 
+    /**
+     * @dev Checks if the upkeep is needed for the lottery.
+     * Upkeep is needed if the lottery is open, the interval has passed since the last timestamp, there are players in the lottery, and the contract has a balance.
+     * @return upkeepNeeded A boolean indicating whether upkeep is needed.
+     */
     function checkUpkeep(
         bytes calldata /*checkData*/
     ) public override returns (bool upkeepNeeded, bytes memory /*performData*/) {
@@ -79,6 +127,13 @@ contract Lottery is VRFConsumerBaseV2 {
         upkeepNeeded = (isOpen && timePassed && hasPlayers && hasBalance);
     }
 
+    /**
+     * @dev Performs the upkeep of the lottery.
+     * The function checks if the upkeep is needed by calling the checkUpkeep function.
+     * If the upkeep is not needed, it reverts the transaction with a Lottery__UpkeepNotNeeded error.
+     * If the upkeep is needed, it changes the lottery state to CALCULATING and requests random words from the VRF Coordinator.
+     * After the request, it emits a RequestedLotteryWinner event with the requestId.
+     */
     function performUpkeep(bytes calldata /*performData*/) external {
         (bool upkeepNeeded,) = checkUpkeep("");
         if (!upkeepNeeded) {
@@ -95,6 +150,15 @@ contract Lottery is VRFConsumerBaseV2 {
         emit RequestedLotteryWinner(requestId);
     }
 
+    /**
+     * @dev This function is called by the VRF Coordinator contract when it receives a valid VRF proof.
+     * It calculates the index of the winner by taking the modulus of the first random word with the number of players.
+     * The function then sets the recent winner, resets the lottery state to OPEN, clears the players array, and updates the last timestamp.
+     * It then attempts to transfer the contract's balance to the recent winner.
+     * If the transfer fails, it reverts the transaction with a Lottery__TransferFailed error.
+     * Finally, it emits a WinnerPicked event with the recent winner.
+     * @param randomWords The VRF output expanded to the requested number of words.
+     */
     function fulfillRandomWords(uint256, uint256[] memory randomWords) internal override {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
@@ -109,14 +173,27 @@ contract Lottery is VRFConsumerBaseV2 {
         emit WinnerPicked(recentWinner);
     }
 
+    /**
+     * @dev Returns the entrance fee for the lottery.
+     * @return The entrance fee in wei.
+     */
     function getEntranceFee() public view returns (uint256) {
         return i_entranceFee;
     }
 
+    /**
+     * @dev Returns the address of the player at the specified index.
+     * @param index The index of the player in the players array.
+     * @return The address of the player.
+     */
     function getPlayer(uint256 index) public view returns (address) {
         return s_players[index];
     }
 
+    /**
+     * @dev Returns the address of the most recent winner.
+     * @return The address of the recent winner.
+     */
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
     }
