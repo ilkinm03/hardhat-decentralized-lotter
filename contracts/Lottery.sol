@@ -198,4 +198,44 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function getRecentWinner() public view returns (address) {
         return s_recentWinner;
     }
+
+    /**
+     * @dev Returns the current state of the lottery.
+     * @return The current state of the lottery.
+     */
+    function getLotteryState() public view returns (LotteryState) {
+        return s_lotteryState;
+    }
+
+    /**
+     * @dev Returns the number of words requested from the VRF.
+     * @return The number of words requested from the VRF.
+     */
+    function getNumWords() public pure returns (uint32) {
+        return NUM_WORDS;
+    }
+
+    /**
+     * @dev Returns the number of players in the lottery.
+     * @return The number of players in the lottery.
+     */
+    function getNumberOfPlayers() public view returns (uint256) {
+        return s_players.length;
+    }
+
+    /**
+     * @dev Returns the latest timestamp when the lottery was drawn.
+     * @return The latest timestamp when the lottery was drawn.
+     */
+    function getLatestTimestamp() public view returns (uint256) {
+        return s_lastTimestamp;
+    }
+
+    /**
+     * @dev Returns the number of confirmations required for the VRF request.
+     * @return The number of confirmations required for the VRF request.
+     */
+    function getRequestConfirmations() public pure returns (uint16) {
+        return REQUEST_CONFIRMATIONS;
+    }
 }
