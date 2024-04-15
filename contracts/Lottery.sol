@@ -4,12 +4,13 @@ pragma solidity ^0.8.0;
 import "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import "@chainlink/contracts/src/v0.8/vrf/interfaces/VRFCoordinatorV2Interface.sol";
 
-    error Lottery_InsufficientFunds();
-    error Lottery_TransferFailed();
     error Lottery__InsufficientFunds();
     error Lottery__TransferFailed();
+    error Lottery__NotOpen();
 
 contract Lottery is VRFConsumerBaseV2 {
+
+    enum LotteryState {OPEN, CALCULATING}
 
     uint256 private immutable i_entranceFee;
     address payable[] private s_players;
@@ -21,6 +22,7 @@ contract Lottery is VRFConsumerBaseV2 {
     uint32 private constant NUM_WORDS = 1;
 
     address private s_recentWinner;
+    LotteryState private s_lotteryState;
 
     event LotteryEnter(address indexed player);
     event RequestedLotteryWinner(uint256 indexed requestId);
@@ -29,6 +31,13 @@ contract Lottery is VRFConsumerBaseV2 {
     modifier requireMinimumValue() {
         if (msg.value < i_entranceFee) {
             revert Lottery__InsufficientFunds();
+        }
+        _;
+    }
+
+    modifier requireLotteryNotEnded() {
+        if (s_lotteryState != LotteryState.OPEN) {
+            revert Lottery__NotOpen();
         }
         _;
     }
@@ -45,14 +54,16 @@ contract Lottery is VRFConsumerBaseV2 {
         i_gasLane = gasLane;
         i_subscriptionId = subscriptionId;
         i_callbackGasLimit = callbackGasLimit;
+        s_lotteryState = LotteryState.OPEN;
     }
 
-    function enterLottery() public payable requireMinimumValue {
+    function enterLottery() public payable requireLotteryNotEnded requireMinimumValue {
         s_players.push(payable(msg.sender));
         emit LotteryEnter(msg.sender);
     }
 
     function requestRandomWinner() external {
+        s_lotteryState = LotteryState.CALCULATING;
         uint256 requestId = i_vrfCoordinator.requestRandomWords(
             i_gasLane,
             i_subscriptionId,
@@ -67,6 +78,8 @@ contract Lottery is VRFConsumerBaseV2 {
         uint256 indexOfWinner = randomWords[0] % s_players.length;
         address payable recentWinner = s_players[indexOfWinner];
         s_recentWinner = recentWinner;
+        s_lotteryState = LotteryState.OPEN;
+        s_players = new address payable[](0);
         (bool success,) = recentWinner.call{value: address(this).balance}("");
         if (!success) {
             revert Lottery__TransferFailed();
