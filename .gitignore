@@ -69,3 +69,4 @@ blockchain/keystore/**
 blockchain/history
 yarn.lock
 package-lock.json
+gas-report.txt
