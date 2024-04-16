@@ -1,12 +1,37 @@
-require("@nomiclabs/hardhat-waffle")
-require("@nomiclabs/hardhat-etherscan")
-require("hardhat-deploy")
-require("solidity-coverage")
-require("hardhat-gas-reporter")
-require("hardhat-contract-sizer")
-require("dotenv").config()
+require("@nomiclabs/hardhat-waffle");
+require("@nomiclabs/hardhat-etherscan");
+require("hardhat-deploy");
+require("hardhat-gas-reporter");
+require("hardhat-contract-sizer");
+require("solidity-coverage");
+require("dotenv").config();
+const { vars } = require("hardhat/config");
 
 /** @type import('hardhat/config').HardhatUserConfig */
 module.exports = {
-  solidity: "0.8.24",
+    solidity: "0.8.24",
+    defaultNetwork: "hardhat",
+    networks: {
+        hardhat: {
+            chainId: 31377,
+            blockConfirmations: 1,
+        },
+        sepolia: {
+            chainId: 11155111,
+            blockConfirmations: 6,
+            url: vars.get("SEPOLIA_RPC_URL"),
+            accounts: [vars.get("PRIVATE_KEY")],
+        }
+    },
+    etherscan: {
+        apiKey: vars.get("ETHERSCAN_API_KEY"),
+    },
+    namedAccounts: {
+        deployer: {
+            default: 0,
+        },
+        player: {
+            default: 1,
+        },
+    },
 };
