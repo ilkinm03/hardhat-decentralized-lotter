@@ -238,4 +238,12 @@ contract Lottery is VRFConsumerBaseV2, AutomationCompatibleInterface {
     function getRequestConfirmations() public pure returns (uint16) {
         return REQUEST_CONFIRMATIONS;
     }
+
+    /**
+     * @dev Returns the interval for the lottery draw.
+     * @return The interval for the lottery draw in seconds.
+     */
+    function getInterval() public view returns (uint256) {
+        return i_interval;
+    }
 }
