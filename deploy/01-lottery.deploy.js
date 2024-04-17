@@ -12,10 +12,10 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     let vrfCoordinatorV2Address, subscriptionId;
     if (DEVELOPMENT_CHAINS.includes(network.name)) {
         const vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock");
-        vrfCoordinatorV2Address = await vrfCoordinatorV2Mock.getAddress();
+        vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
         const txResponse = await vrfCoordinatorV2Mock.createSubscription();
         const txReceipt = await txResponse.wait(1);
-        subscriptionId = txReceipt.logs[0].args.subId;
+        subscriptionId = txReceipt.events[0].args.subId;
         await vrfCoordinatorV2Mock.fundSubscription(subscriptionId, VRF_SUB_FUND_AMOUNT);
     } else {
         vrfCoordinatorV2Address = networkConfig[chainId].vrfCoordinatorV2;
