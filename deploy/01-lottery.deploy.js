@@ -9,9 +9,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
     const { deploy, log } = deployments;
     const { deployer } = await getNamedAccounts();
     const chainId = network.config.chainId;
-    let vrfCoordinatorV2Address, subscriptionId;
+    let vrfCoordinatorV2Address, subscriptionId, vrfCoordinatorV2Mock;
     if (DEVELOPMENT_CHAINS.includes(network.name)) {
-        const vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock");
+        vrfCoordinatorV2Mock = await ethers.getContract("VRFCoordinatorV2Mock");
         vrfCoordinatorV2Address = vrfCoordinatorV2Mock.address;
         const txResponse = await vrfCoordinatorV2Mock.createSubscription();
         const txReceipt = await txResponse.wait(1);
@@ -41,6 +41,9 @@ module.exports = async ({ getNamedAccounts, deployments }) => {
         args,
         waitConfirmations: network.config.blockConfirmations || 1,
     });
+    if (DEVELOPMENT_CHAINS.includes(network.name)) {
+        await vrfCoordinatorV2Mock.addConsumer(subscriptionId, lottery.address);
+    }
     if (!DEVELOPMENT_CHAINS.includes(network.name) && vars.get("ETHERSCAN_API_KEY")) {
         log("Verifying...");
         await verify(lottery.address, args);
