@@ -20,7 +20,7 @@ chai.use(solidity);
             interval = await lottery.getInterval();
         });
 
-        describe("constructor", async () => {
+        describe("constructor", () => {
             it("should initialize lottery with OPEN (0) state", async () => {
                 const lotteryState = await lottery.getLotteryState();
                 assert.equal(lotteryState.toString(), "0");
@@ -31,7 +31,7 @@ chai.use(solidity);
             });
         });
 
-        describe("enterLottery", async () => {
+        describe("enterLottery", () => {
             it("should revert with Lottery__InsufficientFunds when fund are not enough", async () => {
                 await expect(lottery.enterLottery()).to.be.revertedWith("Lottery__InsufficientFunds");
             });
