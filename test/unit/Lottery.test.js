@@ -90,4 +90,37 @@ chai.use(solidity);
                 assert.equal(upkeepNeeded, true);
             })
         });
+
+        describe("performUpkeep", () => {
+            it("should only run when checkUpkeep is true", async () => {
+                await lottery.enterLottery({ value: lotteryEntranceFee });
+                await network.provider.send("evm_increaseTime", [Number(interval) + 1]);
+                await network.provider.send("evm_mine", []);
+                const tx = await lottery.performUpkeep([]);
+                assert(tx);
+            });
+
+            it("should revert when checkUpkeep is false", async () => {
+                await expect(lottery.performUpkeep([])).to.be.revertedWith("Lottery__UpkeepNotNeeded");
+            });
+
+            it('should update the lottery state', async () => {
+                await lottery.enterLottery({ value: lotteryEntranceFee });
+                await network.provider.send("evm_increaseTime", [Number(interval) + 1]);
+                await network.provider.send("evm_mine", []);
+                await lottery.performUpkeep([]);
+                const lotteryState = await lottery.getLotteryState();
+                assert.equal(Number(lotteryState), 1);
+            });
+
+            it("should emit Lottery Winner event if successful", async () => {
+                await lottery.enterLottery({ value: lotteryEntranceFee });
+                await network.provider.send("evm_increaseTime", [Number(interval) + 1]);
+                await network.provider.send("evm_mine", []);
+                const txResponse = await lottery.performUpkeep([]);
+                const txReceipt = await txResponse.wait(1);
+                const requestId = txReceipt.events[1].args.requestId;
+                assert(Number(requestId) > 0);
+            });
+        });
     });
