@@ -88,7 +88,7 @@ chai.use(solidity);
                 await network.provider.send("evm_mine", []);
                 const { upkeepNeeded } = await lottery.callStatic.checkUpkeep([]);
                 assert.equal(upkeepNeeded, true);
-            })
+            });
         });
 
         describe("performUpkeep", () => {
@@ -104,7 +104,7 @@ chai.use(solidity);
                 await expect(lottery.performUpkeep([])).to.be.revertedWith("Lottery__UpkeepNotNeeded");
             });
 
-            it('should update the lottery state', async () => {
+            it("should update the lottery state", async () => {
                 await lottery.enterLottery({ value: lotteryEntranceFee });
                 await network.provider.send("evm_increaseTime", [Number(interval) + 1]);
                 await network.provider.send("evm_mine", []);
@@ -121,6 +121,68 @@ chai.use(solidity);
                 const txReceipt = await txResponse.wait(1);
                 const requestId = txReceipt.events[1].args.requestId;
                 assert(Number(requestId) > 0);
+            });
+        });
+
+        describe("fulfillRandomWords", () => {
+            beforeEach(async () => {
+                await lottery.enterLottery({ value: lotteryEntranceFee });
+                await network.provider.send("evm_increaseTime", [Number(interval) + 1]);
+                await network.provider.send("evm_mine", []);
+            });
+
+            it("can only be called after performUpkeep", async () => {
+                await expect(
+                    vrfCoordinatorV2Mock.fulfillRandomWords(0, lottery.address),
+                ).to.be.revertedWith("nonexistent request");
+            });
+
+            it("should pick a winner, reset the lottery and send money", async () => {
+                const additionalEntrance = 3;
+                const startingAccountIndex = 1;
+                const accounts = await ethers.getSigners();
+                let winnerStartingBalance;
+                for (let i = startingAccountIndex; i < startingAccountIndex + additionalEntrance; i++) {
+                    lottery = lottery.connect(accounts[i]);
+                    await lottery.enterLottery({ value: lotteryEntranceFee });
+                }
+                const startingTs = await lottery.getLatestTimestamp();
+                await new Promise(async (resolve, reject) => {
+                    lottery.once("WinnerPicked", async () => {
+                        console.log("WinnerPicked event triggered!");
+                        try {
+                            const lotteryState = await lottery.getLotteryState();
+                            const endingTs = await lottery.getLatestTimestamp();
+                            const numPlayers = await lottery.getNumberOfPlayers();
+                            const winnerEndingBalance = await accounts[1].getBalance();
+                            assert.equal(numPlayers.toString(), "0");
+                            assert.equal(lotteryState.toString(), "0");
+                            assert(endingTs > startingTs);
+                            assert.equal(
+                                winnerEndingBalance.toString(),
+                                winnerStartingBalance.add(
+                                    lotteryEntranceFee
+                                        .mul(additionalEntrance + 1)
+                                        .toString(),
+                                ),
+                            );
+                            resolve();
+                        } catch (error) {
+                            reject(error);
+                        }
+                    });
+                    try {
+                        const tx = await lottery.performUpkeep([]);
+                        const txReceipt = await tx.wait(1);
+                        winnerStartingBalance = await accounts[1].getBalance();
+                        await vrfCoordinatorV2Mock.fulfillRandomWords(
+                            txReceipt.events[1].args.requestId,
+                            lottery.address,
+                        );
+                    } catch (error) {
+                        reject(error);
+                    }
+                });
             });
         });
     });
